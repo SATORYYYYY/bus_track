@@ -49,3 +49,4 @@ frontend/.env.production.local
 
 tmp/
 temp/
+.aider*

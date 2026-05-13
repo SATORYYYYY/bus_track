@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Container, Card, Button, Row, Col, Spinner, Badge } from 'react-bootstrap';
@@ -9,7 +9,7 @@ function SearchResults() {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const query = new URLSearchParams(location.search);
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -30,7 +30,7 @@ function SearchResults() {
       }
     };
     fetchSchedules();
-  }, [location]);
+  }, [location, query]);
 
   if (loading) return (
     <Container className="mt-5 text-center">

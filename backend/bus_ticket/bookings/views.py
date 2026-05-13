@@ -32,11 +32,12 @@ class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post', 'patch'])
     def pay(self, request, pk=None):
         booking = self.get_object()
-        if booking.status == 'pending':
-            booking.status = 'paid'
+        new_status = request.data.get('status', 'paid')
+        if new_status in ['paid', 'confirmed', 'cancelled']:
+            booking.status = new_status
             booking.save()
-            return Response({'status': 'paid'})
-        return Response({'error': 'Booking cannot be paid'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': booking.status})
+        return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)

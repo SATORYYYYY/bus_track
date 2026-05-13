@@ -27,6 +27,30 @@ class ScheduleSerializer(serializers.ModelSerializer):
         model = Schedule
         fields = '__all__'
 
+
+class ScheduleCreateSerializer(serializers.ModelSerializer):
+    route = serializers.DictField(write_only=True, required=False)
+
+    class Meta:
+        model = Schedule
+        fields = '__all__'
+
+    def create(self, validated_data):
+        route_data = validated_data.pop('route', {})
+        origin_id = route_data.get('origin')
+        destination_id = route_data.get('destination')
+        distance_km = route_data.get('distance_km', 0)
+
+        # Получаем или создаем маршрут
+        route, created = Route.objects.get_or_create(
+            origin_id=origin_id,
+            destination_id=destination_id,
+            defaults={'distance_km': distance_km}
+        )
+
+        schedule = Schedule.objects.create(route=route, **validated_data)
+        return schedule
+
 class ScheduleDetailSerializer(serializers.ModelSerializer):
     bus = BusSerializer(read_only=True)
     route = RouteSerializer(read_only=True)
