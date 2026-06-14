@@ -1,0 +1,28 @@
+# Backend dependencies
+# Install with: pip install -r requirements.txt
+
+# Django
+Django>=6.0.0,<6.1.0
+djangorestframework>=3.14.0,<4.0.0
+
+# CORS support
+django-cors-headers>=4.0.0,<5.0.0
+
+# JWT Authentication
+djangorestframework-simplejwt>=5.0.0,<6.0.0
+djoser>=2.2.0,<3.0.0
+
+# API Documentation
+drf-spectacular>=0.26.0,<1.0.0
+
+# Admin Panel Customization
+django-jazzmin>=2.6.0,<3.0.0
+
+# Debugging
+django-debug-toolbar>=4.0.0,<5.0.0
+
+# Database (optional - uncomment for production PostgreSQL)
+# psycopg2-binary>=2.9.0,<3.0.0
+
+# Environment variables
+python-decouple>=3.8,<4.0.0

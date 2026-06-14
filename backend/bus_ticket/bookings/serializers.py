@@ -6,11 +6,12 @@ import uuid
 
 class BookingSerializer(serializers.ModelSerializer):
     schedule = ScheduleSerializer(read_only=True)
+    schedule_id = serializers.IntegerField(write_only=True)
     discount_percent = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
-        fields = ('id', 'schedule', 'passenger_name', 'passenger_age', 'passenger_email',
+        fields = ('id', 'schedule', 'schedule_id', 'passenger_name', 'passenger_age', 'passenger_email',
                   'passport_number', 'has_luggage', 'seat_number',
                   'booking_code', 'status', 'booking_date', 'discount_type', 'final_price', 'discount_percent')
         read_only_fields = ('booking_code', 'status', 'booking_date', 'final_price')
@@ -19,7 +20,20 @@ class BookingSerializer(serializers.ModelSerializer):
         return obj.calculate_discount()
 
     def create(self, validated_data):
-        schedule = validated_data['schedule']
+        schedule_id = validated_data.pop('schedule_id')
+        try:
+            schedule = Schedule.objects.get(id=schedule_id)
+        except Schedule.DoesNotExist:
+            raise serializers.ValidationError("Рейс не найден")
+
+        validated_data['schedule'] = schedule
+
+        # Проверка доступности мест
+        booked_seats = Booking.objects.filter(schedule=schedule).values_list('seat_number', flat=True)
+        seat_number = validated_data.get('seat_number')
+        if seat_number in booked_seats:
+            raise serializers.ValidationError(f"Место {seat_number} уже занято")
+
         if schedule.available_seats <= 0:
             raise serializers.ValidationError("Нет свободных мест")
 

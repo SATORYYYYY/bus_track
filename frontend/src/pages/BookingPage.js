@@ -80,14 +80,17 @@ function BookingPage() {
       return;
     }
     try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.post('http://localhost:8000/api/bookings/create/', {
-        schedule: scheduleId,
+        schedule_id: scheduleId,
         seat_number: selectedSeat,
         ...formData,
-      });
+      }, { headers });
       navigate(`/confirmation/${response.data.booking_code}`);
     } catch (error) {
-      setError('Ошибка при бронировании. Возможно, место уже занято.');
+      console.error('Ошибка бронирования:', error.response?.data);
+      setError(error.response?.data?.detail || 'Ошибка при бронировании. Возможно, место уже занято.');
     }
   };
 
