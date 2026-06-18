@@ -154,7 +154,7 @@ python manage.py migrate
 #### 2.3. Загрузка тестовых данных
 
 ```bash
-python manage.py load_cities        # Загрузка 28 городов России
+python manage.py load_local_routes        # Загрузка 28 городов России
 python manage.py fetch_schedules    # Загрузка расписания (опционально)
 ```
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Autosuggest from 'react-autosuggest';
 import axios from 'axios';
 import { Form } from 'react-bootstrap';
@@ -6,22 +6,49 @@ import { Form } from 'react-bootstrap';
 const CityInput = ({ value, onChange, placeholder, label, id }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [inputValue, setInputValue] = useState(value || '');
+  const [allCities, setAllCities] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef(null);
 
-  const getSuggestions = async (value) => {
+  // Загружаем все города один раз при монтировании
+  useEffect(() => {
+    const fetchAllCities = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/buses/cities/autocomplete/', {
+          params: { q: '' }
+        });
+        setAllCities(response.data);
+      } catch (error) {
+        console.error('Ошибка загрузки городов:', error);
+      }
+    };
+    fetchAllCities();
+  }, []);
+
+  const getSuggestions = (value) => {
     const inputValue = value.trim().toLowerCase();
-    if (inputValue.length < 2) {
-      setSuggestions([]);
+    
+    if (!inputValue) {
+      // Если поле пустое — показываем все города
+      setSuggestions(allCities);
       return;
     }
 
-    try {
-      const response = await axios.get('http://localhost:8000/api/buses/cities/autocomplete/', {
-        params: { q: inputValue }
-      });
-      setSuggestions(response.data);
-    } catch (error) {
-      console.error('Ошибка загрузки городов:', error);
-    }
+    // Фильтруем по введенному тексту
+    const filtered = allCities.filter(city => 
+      city.name.toLowerCase().includes(inputValue)
+    );
+    
+    // Сортируем: сначала те, что начинаются с запроса
+    filtered.sort((a, b) => {
+      const aStarts = a.name.toLowerCase().startsWith(inputValue);
+      const bStarts = b.name.toLowerCase().startsWith(inputValue);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    setSuggestions(filtered);
   };
 
   const onSuggestionsFetchRequested = ({ value }) => {
@@ -29,7 +56,10 @@ const CityInput = ({ value, onChange, placeholder, label, id }) => {
   };
 
   const onSuggestionsClearRequested = () => {
-    setSuggestions([]);
+    // Не очищаем подсказки, если поле в фокусе
+    if (!isFocused) {
+      setSuggestions([]);
+    }
   };
 
   const getSuggestionValue = (suggestion) => suggestion.name;
@@ -48,6 +78,20 @@ const CityInput = ({ value, onChange, placeholder, label, id }) => {
     onChange(newValue);
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+    // При фокусе показываем все города
+    setSuggestions(allCities);
+  };
+
+  const handleBlur = () => {
+    // Задержка, чтобы успел сработать клик по предложению
+    setTimeout(() => {
+      setIsFocused(false);
+      setSuggestions([]);
+    }, 200);
+  };
+
   useEffect(() => {
     setInputValue(value);
   }, [value]);
@@ -56,6 +100,8 @@ const CityInput = ({ value, onChange, placeholder, label, id }) => {
     placeholder,
     value: inputValue,
     onChange: handleChange,
+    onFocus: handleFocus,
+    onBlur: handleBlur,
     className: 'form-control',
     id: id,
   };
@@ -71,6 +117,7 @@ const CityInput = ({ value, onChange, placeholder, label, id }) => {
         renderSuggestion={renderSuggestion}
         inputProps={inputProps}
         highlightFirstSuggestion={true}
+        alwaysRenderSuggestions={isFocused}
       />
     </Form.Group>
   );

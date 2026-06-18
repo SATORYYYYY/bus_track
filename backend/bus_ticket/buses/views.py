@@ -32,10 +32,10 @@ class CityAutocompleteView(APIView):
     def get(self, request):
         query = request.query_params.get('q', '').strip()
         
-        all_cities = list(City.objects.all().order_by('name'))
+        all_cities = list(City.objects.filter(is_active=True).order_by('name'))
         
-        # Если запрос пустой или короткий, возвращаем все города
-        if not query or len(query) < 2:
+        # Если запрос пустой, возвращаем все города
+        if not query:
             serializer = CitySerializer(all_cities, many=True)
             return Response(serializer.data)
         

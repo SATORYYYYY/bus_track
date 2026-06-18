@@ -27,6 +27,7 @@ function ProfilePage() {
   const { user, logout, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
+  const [bookingError, setBookingError] = useState(null);
   const [profileData, setProfileData] = useState({
     full_name: '',
     birth_date: '',
@@ -52,15 +53,26 @@ function ProfilePage() {
     }
   }, [user, navigate, authLoading]);
 
+  const handleUnauthorized = () => {
+    localStorage.removeItem('token');
+    logout();
+    navigate('/login');
+  };
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
+      setBookingError(null);
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get('http://localhost:8000/api/bookings/my/', { headers });
       setBookings(response.data);
     } catch (err) {
-      setError('Не удалось загрузить бронирования');
+      if (err.response?.status === 401) {
+        handleUnauthorized();
+        return;
+      }
+      setBookingError('Не удалось загрузить бронирования');
     } finally {
       setLoading(false);
     }
@@ -81,14 +93,25 @@ function ProfilePage() {
 
   const saveProfile = async () => {
     try {
+      setError(null);
+      setSuccess(null);
       const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      if (!token) {
+        handleUnauthorized();
+        return;
+      }
+      const headers = { Authorization: `Bearer ${token}` };
       await axios.patch('http://localhost:8000/api/users/me/', { profile: profileData }, { headers });
       setEditing(false);
       setSuccess('Профиль успешно обновлен');
       setTimeout(() => setSuccess(null), 3000);
-      window.location.reload();
+      // Обновляем данные без перезагрузки страницы
+      fetchBookings();
     } catch (error) {
+      if (error.response?.status === 401) {
+        handleUnauthorized();
+        return;
+      }
       setError('Ошибка при сохранении профиля');
     }
   };
@@ -109,8 +132,8 @@ function ProfilePage() {
 
   // Статистика пользователя
   const totalBookings = bookings.length;
-  const totalSpent = bookings.reduce((sum, b) => sum + (b.final_price || b.schedule?.price || 0), 0);
-  const upcomingTrips = bookings.filter(b => new Date(b.schedule?.departure_time) > new Date()).length;
+  const totalSpent = bookings.reduce((sum, b) => sum + (Number(b.final_price) || Number(b.schedule?.price) || 0), 0);
+  const upcomingTrips = bookings.filter(b => b.schedule?.departure_time && new Date(b.schedule.departure_time) > new Date()).length;
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -155,6 +178,14 @@ function ProfilePage() {
 
       {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
       {success && <Alert variant="success" onClose={() => setSuccess(null)} dismissible>{success}</Alert>}
+      {bookingError && !loading && (
+        <Alert variant="warning" onClose={() => setBookingError(null)} dismissible>
+          {bookingError}
+          <Button variant="outline-warning" size="sm" className="ms-3" onClick={fetchBookings}>
+            Повторить
+          </Button>
+        </Alert>
+      )}
 
       <Row>
         {/* Левая колонка - Профиль */}

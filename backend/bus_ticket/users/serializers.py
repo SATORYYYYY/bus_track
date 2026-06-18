@@ -19,8 +19,17 @@ class UserSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        profile = instance.profile
+        # Создаем профиль, если его нет
+        profile, created = Profile.objects.get_or_create(user=instance)
         for attr, value in profile_data.items():
             setattr(profile, attr, value)
         profile.save()
         return instance
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        # Убеждаемся что профиль есть в выдаче
+        if not representation.get('profile'):
+            profile, _ = Profile.objects.get_or_create(user=instance)
+            representation['profile'] = ProfileSerializer(profile).data
+        return representation
